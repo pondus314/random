@@ -1,0 +1,17 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+ int main() {
+    int a, b, c, x, y, z;
+    cin>>x>>y>>z;
+    a=min(x,min(y,z));
+    b = max(x,max(y, z));
+    if (a!=x and b!=x) {
+        cout<<a<<endl;
+    } else if (b!=y and a!=y) {
+        cout<<y<<endl;
+    } else {
+        cout<<z<<endl;
+    }
+    return 0;
+}
