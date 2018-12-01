@@ -17,8 +17,8 @@ end
 
 local Player = require "player"
 
-local DESIRED_WIDTH = 480	-- Change if necessary
-local DESIRED_HEIGHT = 1080	-- Change if necessary
+local DESIRED_WIDTH = 480
+local DESIRED_HEIGHT = 1080
 
 local love = love
 local LogicalScale = {
@@ -66,6 +66,7 @@ function love.load()
    fonts.large = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 128)
    fonts.huge = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 256)
 
+
    --[[
 		And it ends HERE
 	]]--
@@ -91,7 +92,7 @@ function love.resize(w, h)
 	LogicalScale.OffY = (LogicalScale.ScreenY - LogicalScale.ScaleOverall * DESIRED_HEIGHT) / 2
 end
 
-function love.update()
+function love.update() --All mine
    button.held = love.keyboard.isDown('space') and
                button.down
    button.lift = not love.keyboard.isDown('space') and
@@ -268,16 +269,24 @@ function love.draw()
       love.graphics.setColor(1, 1, 1)
       for i=#Player.actions, 1, -1 do
          local name = Player.actions[i]['name']
-         love.graphics.setFont(fonts.medium)
-         love.graphics.print(name, 120, 40+i*64)
+         if i==1 then
+            love.graphics.setColor(0, 1, 0.5)
+         else
+            love.graphics.setColor(1, 1, 1)
+         end
+         love.graphics.setFont(fonts.small)
+         love.graphics.print(name, (480-(fonts.small:getWidth(name)))/2, 256+i*32)
       end
+
+      love.graphics.setColor(1, 1, 1)
       love.graphics.setFont(fonts.large)
-      love.graphics.print(Player.score, (480-(fonts.large:getWidth(Player.score)))/2, 200)
+      love.graphics.print(Player.score, (480-(fonts.large:getWidth(Player.score)))/2, 64)
 
    else
       love.graphics.setBackgroundColor(0.1,0,0.05)
       love.graphics.setFont(fonts.huge)
       love.graphics.print("Game Over", (480-fonts.huge:getWidth("Game over"))/2, 400)
+      love.graphics.print("Your score is " .. Player.score, (480-fonts.huge:getWidth("Your score is ")-fonts.huge:getWidth(Player.score))/2, 656)
    end
 
    --[[
