@@ -69,6 +69,10 @@ function love.load()
       }
    }
 
+   fonts = {}
+   fonts.large = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 128)
+   fonts.medium = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 64)
+   fonts.huge = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 256)
 
    actcount = 0
 end
@@ -99,18 +103,7 @@ function love.update()
       end
 
 
-      Player.score = Player.score +1
-      if (Player.action) then
-         Player.tleft=Player.tleft-1
-         Player.action()
-         if Player.tleft==0 then
-            if #actives > 0 then
-               table.remove(actives, 1)
-            end
-            Player.action = nil
-            Player.pass = true
-         end
-      end
+      Player:update()
 
       if objecttimer > 0 then
          objecttimer = objecttimer - 1
@@ -207,8 +200,9 @@ end
 function love.draw()
    if not gameover then
       love.graphics.setBackgroundColor(0.1,0,0.05)
-      love.graphics.setColor(0, 1, 0.5)
-      love.graphics.rectangle('fill', Player.x, Player.y, Player.w, Player.h)
+
+      Player:draw()
+
       love.graphics.setColor(0, 0, 0)
 
       for i=#walls, 1, -1 do
@@ -237,14 +231,16 @@ function love.draw()
       love.graphics.setColor(1, 1, 1)
       for i=#actions, 1, -1 do
          local name = actions[i]['name']
-         love.graphics.print(name, 120, 40+i*10)
+         love.graphics.setFont(fonts.medium)
+         love.graphics.print(name, 120, 40+i*64)
       end
-
-      love.graphics.print(Player.score..'  '..love.timer.getFPS(), 960, 200)
+      love.graphics.setFont(fonts.large)
+      love.graphics.print(Player.score, (1920-fonts.large:getWidth(Player.score))/2, 200)
 
    else
       love.graphics.setBackgroundColor(0.1,0,0.05)
-      love.graphics.print("gameover", 960, 400)
+      love.graphics.setFont(fonts.huge)
+      love.graphics.print("Game Over", (1920-fonts.huge:getWidth("Game over"))/2, 400)
    end
 end
 
