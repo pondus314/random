@@ -21,6 +21,8 @@ function love.load()
    math.randomseed(os.time())
    love.window.setMode(400, 1080, {fullscreen=true})
 
+   gameover = false
+
    button = {}
    button.down = false
    button.held = false
@@ -32,17 +34,39 @@ function love.load()
    table.insert(walls, {['x'] = 0, ['y'] = 0, ['w'] = 720, ['h'] = 1080 })
    table.insert(walls, {['x'] = 1200, ['y'] = 0, ['w'] = 720, ['h'] = 1080 })
 
+   objects = {}
+
    actions = {
       [1] = {
          ['action'] = jump,
-         ['time'] = 1000
+         ['time'] = 1000,
+         ['name'] = 'Jump'
+      },
+      [2] = {
+         ['action'] = jump,
+         ['time'] = 1000,
+         ['name'] = 'Jump'
+      },
+      [3] = {
+         ['action'] = jump,
+         ['time'] = 1000,
+         ['name'] = 'Jump'
+      },
+      [4] = {
+         ['action'] = jump,
+         ['time'] = 1000,
+         ['name'] = 'Jump'
+      },
+      [5] = {
+         ['action'] = jump,
+         ['time'] = 1000,
+         ['name'] = 'Jump'
       }
    }
    actcount = 0
 end
 
 function love.update()
-
    button.held = love.keyboard.isDown('space') and
                button.down
    button.lift = not love.keyboard.isDown('space') and
@@ -50,12 +74,13 @@ function love.update()
    button.down = love.keyboard.isDown('space')
 
    if button.down and not button.held and Player.pass then
-      actcount=actcount+1
-         if actions[actcount] then
-            Player.action = actions[actcount]['action']
-            Player.tleft = actions[actcount]['time']
+      if #actions then
+         if actions[1] then
+            Player.action = actions[1]['action']
+            Player.tleft = actions[1]['time']
          end
-      actcount = actcount % #actions
+         table.remove(actions,1)
+      end
    end
 
    if (Player.action) then
@@ -67,22 +92,70 @@ function love.update()
       end
    end
 
+   if math.random() < 0.02 then
+      if math.random() < 0.9 then
+         if math.random() < 0.5 then
+            table.insert(objects, {['y']=-20, ['x'] = 720, ['w'] = 40, ['h'] = 40, ['type'] = 'act', ['action'] = jump, ['time'] = 1000})
+         else
+            table.insert(objects, {['y']=-20, ['x'] = 1160, ['w'] = 40, ['h'] = 40, ['type'] = 'act', ['action'] = jump, ['time'] = 1000})
+         end
+      else
+         if math.random() < 0.5 then
+            table.insert(objects, {['y']=-20, ['x'] = 720, ['w'] = 40, ['h'] = 40, ['type'] = 'obst'})
+         else
+            table.insert(objects, {['y']=-20, ['x'] = 1160, ['w'] = 40, ['h'] = 40, ['type'] = 'obst'})
+         end
+      end
+   end
+
+   for i = #objects, 1, -1 do
+      objects[i].y = objects[i].y+4
+   end
+
+   for i = #objects, 1, -1 do
+      object = objects[i]
+      if CheckCollision(Player, object) then
+         if object['type']=='obst' then
+            gameover = true
+         else
+            if object['type']=='act' then
+               table.insert(actions, {['action']=object['action'], ['time'] =object['time']})
+               table.remove(objects, i)
+            end
+         end
+      end
+   end
+
 end
 
 function love.draw()
+   if not gameover then
+      love.graphics.setBackgroundColor(0.1,0,0.05)
+      love.graphics.setColor(0, 1, 0.5)
+      love.graphics.rectangle('fill', Player.x, Player.y, Player.w, Player.h)
+      love.graphics.setColor(0, 0, 0)
 
-   love.graphics.setBackgroundColor(0.1,0,0.05)
-   love.graphics.setColor(0, 1, 0.5)
-   love.graphics.rectangle('fill', Player.x, Player.y, Player.w, Player.h)
-   love.graphics.setColor(0, 0, 0)
+      for i=#walls, 1, -1 do
+         wall = walls[i]
+         love.graphics.rectangle('fill', wall.x, wall.y, wall.w, wall.h)
+      end
 
-   for i=#walls, 1, -1 do
-      wall = walls[i]
-      love.graphics.rectangle('fill', wall.x, wall.y, wall.w, wall.h)
+      for i=#objects, 1, -1 do
+         object = objects[i]
+         if object['type']=='obst' then
+            love.graphics.setColor(1, 0, 0)
+         else
+            love.graphics.setColor(0, 0, 1)
+         end
+         love.graphics.rectangle('fill', object.x, object.y, object.w, object.h)
+      end
+
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.print(Player.side, 960, 400)
+   else
+      love.graphics.setBackgroundColor(0.1,0,0.05)
+      love.graphics.print("gameover", 960, 400)
    end
-
-   love.graphics.setColor(1, 1, 1)
-   love.graphics.print(Player.side, 960, 400)
 end
 
 function nothing()
@@ -100,6 +173,5 @@ function jump()
          Player.side = Player.side * (-1)
          return
       end
-
    end
 end

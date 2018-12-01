@@ -1,8 +1,8 @@
 local player = {}
 
 function player:setup()
-   self.x = 960
-   self.y = 540
+   self.x = 720
+   self.y = 840
    self.w = 48
    self.h = 48
    self.pass = true
