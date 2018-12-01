@@ -16,10 +16,33 @@ function CheckCollision(rect1, rect2)
 end
 
 local Player = require "player"
-screenHeight = 1080
-screenWidth = 1920
+
+local DESIRED_WIDTH = 480	-- Change if necessary
+local DESIRED_HEIGHT = 1080	-- Change if necessary
+
+local love = love
+local LogicalScale = {
+	-- Current screen dimension
+	ScreenX = DESIRED_WIDTH,
+	ScreenY = DESIRED_HEIGHT,
+	-- Letterboxing offset
+	OffX = 0,
+	OffY = 0,
+	-- Overall letterboxing scaling
+	ScaleOverall = 1
+}
+
+local function CalculateTouchPosition(x, y)
+	return
+		(x - LogicalScale.OffX) / LogicalScale.ScaleOverall,
+		(y - LogicalScale.OffY) / LogicalScale.ScaleOverall
+end
 
 function love.load()
+	--[[
+		My code starts HERE
+	]]--
+
    math.randomseed(os.time())
    -- love.window.setMode(400, 1080, {fullscreen=true})
 
@@ -32,49 +55,40 @@ function love.load()
 
    Player:initialise()
 
-   walls = {}
-   table.insert(walls, {['x'] = 0, ['y'] = 0, ['w'] = 720, ['h'] = 1080 })
-   table.insert(walls, {['x'] = 1200, ['y'] = 0, ['w'] = 720, ['h'] = 1080 })
-
    objects = {}
    objecttimer = 0
 
    actives = {}
 
-   actions = {
-      [1] = {
-         ['action'] = jump,
-         ['time'] = 1000,
-         ['name'] = 'Jumpy boots'
-      },
-      [2] = {
-         ['action'] = jump,
-         ['time'] = 1000,
-         ['name'] = 'Jumpy boots'
-      },
-      [3] = {
-         ['action'] = jump,
-         ['time'] = 1000,
-         ['name'] = 'Jumpy boots'
-      },
-      [4] = {
-         ['action'] = jump,
-         ['time'] = 1000,
-         ['name'] = 'Jumpy boots'
-      },
-      [5] = {
-         ['action'] = jump,
-         ['time'] = 1000,
-         ['name'] = 'Jumpy boots'
-      }
-   }
-
    fonts = {}
-   fonts.large = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 128)
+   fonts.small = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 32)
    fonts.medium = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 64)
+   fonts.large = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 128)
    fonts.huge = love.graphics.newFont("assets/fonts/Eastdokdo.ttf", 256)
 
+   --[[
+		And it ends HERE
+	]]--
+
    actcount = 0
+
+	LogicalScale.ScreenX, LogicalScale.ScreenY = love.graphics.getDimensions()
+	LogicalScale.ScaleOverall = math.min(
+		LogicalScale.ScreenX / DESIRED_WIDTH,
+		LogicalScale.ScreenY / DESIRED_HEIGHT
+	)
+	LogicalScale.OffX = (LogicalScale.ScreenX - LogicalScale.ScaleOverall * DESIRED_WIDTH) / 2
+	LogicalScale.OffY = (LogicalScale.ScreenY - LogicalScale.ScaleOverall * DESIRED_HEIGHT) / 2
+end
+
+function love.resize(w, h)
+	LogicalScale.ScreenX, LogicalScale.ScreenY = w, h
+	LogicalScale.ScaleOverall = math.min(
+		LogicalScale.ScreenX / DESIRED_WIDTH,
+		LogicalScale.ScreenY / DESIRED_HEIGHT
+	)
+	LogicalScale.OffX = (LogicalScale.ScreenX - LogicalScale.ScaleOverall * DESIRED_WIDTH) / 2
+	LogicalScale.OffY = (LogicalScale.ScreenY - LogicalScale.ScaleOverall * DESIRED_HEIGHT) / 2
 end
 
 function love.update()
@@ -93,17 +107,28 @@ function love.update()
       end
 
       if button.down and not button.held and Player.pass then
-         if #actions then
-            if actions[1] then
-               Player.action = actions[1]['action']
-               Player.tleft = actions[1]['time']
+         if #Player.actions then
+            if Player.actions[1] then
+               Player.action = Player.actions[1]['action']
+               Player.tleft = Player.actions[1]['time']
             end
-            table.remove(actions,1)
+            table.remove(Player.actions,1)
          end
       end
 
 
-      Player:update()
+      Player.score = Player.score +1
+      if (Player.action) then
+         Player.tleft=Player.tleft-1
+         Player.action()
+         if Player.tleft==0 then
+            if #actives > 0 then
+               table.remove(actives, 1)
+            end
+            Player.action = nil
+            Player.pass = true
+         end
+      end
 
       if objecttimer > 0 then
          objecttimer = objecttimer - 1
@@ -112,11 +137,11 @@ function love.update()
       if math.random() < 0.1 and objecttimer==0 then
          table.insert(objects, {['y']=-20, ['w'] = 40, ['h'] = 40})
          if math.random() < 0.5 then
-            objects[#objects]['x'] = 720
+            objects[#objects]['x'] = 0
          else
-            objects[#objects]['x'] = 1160
+            objects[#objects]['x'] = 440
          end
-         if math.random() < 0.2 and #actions < 10 then
+         if math.random() < 0.2 and #Player.actions < 10 then
                objects[#objects]['type'] = 'act'
                local type = math.random()
                if type < 0.4 then
@@ -180,14 +205,14 @@ function love.update()
             else
                if object['type']=='act' then
                   for i = object['number'], 1, -1 do
-                     table.insert(actions, {['action']=object['action'], ['time'] =object['time'], ['name'] = object['name']})
+                     table.insert(Player.actions, {['action']=object['action'], ['time'] =object['time'], ['name'] = object['name']})
                   end
                   table.remove(objects, i)
                end
             end
          end
 
-         if object.y > screenHeight then
+         if object.y > DESIRED_HEIGHT then
             table.remove(objects, i)
          end
          ::continue::
@@ -198,17 +223,29 @@ function love.update()
 end
 
 function love.draw()
+	love.graphics.push("all")
+
+	love.graphics.translate(LogicalScale.OffX, LogicalScale.OffY)
+	love.graphics.scale(LogicalScale.ScaleOverall, LogicalScale.ScaleOverall)
+
+	--[[
+		MY CODE STARTS HERE
+	]]--
+
    if not gameover then
-      love.graphics.setBackgroundColor(0.1,0,0.05)
+      love.graphics.setColor(0.1,0,0.05)
+
+      love.graphics.rectangle('fill',0, 0, 480, 1080)
 
       Player:draw()
 
       love.graphics.setColor(0, 0, 0)
 
-      for i=#walls, 1, -1 do
-         local wall = walls[i]
-         love.graphics.rectangle('fill', wall.x, wall.y, wall.w, wall.h)
-      end --walls drawing
+      -- for i=#walls, 1, -1 do
+      --    local wall = walls[i]
+      --    love.graphics.rectangle('fill', wall.x, wall.y, wall.w, wall.h)
+      -- end --walls drawing
+
 
       for i=#objects, 1, -1 do
          local object = objects[i]
@@ -229,62 +266,23 @@ function love.draw()
       end --actives drawing
 
       love.graphics.setColor(1, 1, 1)
-      for i=#actions, 1, -1 do
-         local name = actions[i]['name']
+      for i=#Player.actions, 1, -1 do
+         local name = Player.actions[i]['name']
          love.graphics.setFont(fonts.medium)
          love.graphics.print(name, 120, 40+i*64)
       end
       love.graphics.setFont(fonts.large)
-      love.graphics.print(Player.score, (1920-fonts.large:getWidth(Player.score))/2, 200)
+      love.graphics.print(Player.score, (480-(fonts.large:getWidth(Player.score)))/2, 200)
 
    else
       love.graphics.setBackgroundColor(0.1,0,0.05)
       love.graphics.setFont(fonts.huge)
-      love.graphics.print("Game Over", (1920-fonts.huge:getWidth("Game over"))/2, 400)
+      love.graphics.print("Game Over", (480-fonts.huge:getWidth("Game over"))/2, 400)
    end
-end
 
-function nothing()
-   Player.pass = false
-end
+   --[[
+   AND IT ENDS HERE
+   ]]--
 
-function jump()
-   Player.pass = false
-   Player.x = Player.x + 16 * Player.side
-   for i=#walls, 1, -1 do
-      local wall = walls[i]
-      if CheckCollision(Player, wall) then
-         Player.tleft = 0
-         Player.x = Player.x - 16*Player.side
-         Player.side = Player.side * (-1)
-         return
-      end
-   end
-end
-
-function flurry()
-   for i=#actives, 1, -1 do
-      if actives[i]['type']=='Flurry' then
-         actives[i]['x'] = Player.x+4
-         goto noflurry
-      end
-   end
-   table.insert(actives, {['type'] = 'Flurry', ['x'] = Player.x+4, ['y'] = Player.y - Player.h /3, ['w'] = Player.w-8, ['h'] = Player.h / 3})
-   ::noflurry::
-end
-
-function boom()
-   for i=#objects, 1, -1 do
-      table.remove(objects, 1)
-   end
-end
-
-function flip()
-   if math.random() < 0.5 then
-      for i=#objects, 1, -1 do
-         objects[i].x = 1880 - objects[i].x
-      end
-   else
-      Player.x = 1920-48-Player.x
-   end
+	love.graphics.pop()
 end
