@@ -16,10 +16,12 @@ function CheckCollision(rect1, rect2)
 end
 
 local Player = require "player"
+screenHeight = 1080
+screenWidth = 1920
 
 function love.load()
    math.randomseed(os.time())
-   love.window.setMode(400, 1080, {fullscreen=true})
+   -- love.window.setMode(400, 1080, {fullscreen=true})
 
    gameover = false
 
@@ -35,6 +37,9 @@ function love.load()
    table.insert(walls, {['x'] = 1200, ['y'] = 0, ['w'] = 720, ['h'] = 1080 })
 
    objects = {}
+   objecttimer = 0
+
+   actives = {}
 
    actions = {
       [1] = {
@@ -63,6 +68,8 @@ function love.load()
          ['name'] = 'Jump'
       }
    }
+
+
    actcount = 0
 end
 
@@ -73,57 +80,117 @@ function love.update()
                button.down
    button.down = love.keyboard.isDown('space')
 
-   if button.down and not button.held and Player.pass then
-      if #actions then
-         if actions[1] then
-            Player.action = actions[1]['action']
-            Player.tleft = actions[1]['time']
+   if not gameover then
+
+      if (Player.action) then
+         if Player.action==flurry and not button.held then
+            Player.tleft = 1
          end
-         table.remove(actions,1)
       end
-   end
 
-   if (Player.action) then
-      Player.tleft=Player.tleft-1
-      Player.action()
-      if Player.tleft==0 then
-         Player.action = nil
-         Player.pass = true
+      if button.down and not button.held and Player.pass then
+         if #actions then
+            if actions[1] then
+               Player.action = actions[1]['action']
+               Player.tleft = actions[1]['time']
+            end
+            table.remove(actions,1)
+         end
       end
-   end
 
-   if math.random() < 0.02 then
-      if math.random() < 0.9 then
+
+      Player.score = Player.score +1
+      if (Player.action) then
+         Player.tleft=Player.tleft-1
+         Player.action()
+         if Player.tleft==0 then
+            if #actives > 0 then
+               table.remove(actives, 1)
+            end
+            Player.action = nil
+            Player.pass = true
+         end
+      end
+
+      if objecttimer > 0 then
+         objecttimer = objecttimer - 1
+      end
+
+      if math.random() < 0.1 and objecttimer==0 then
+         table.insert(objects, {['y']=-20, ['w'] = 40, ['h'] = 40})
          if math.random() < 0.5 then
-            table.insert(objects, {['y']=-20, ['x'] = 720, ['w'] = 40, ['h'] = 40, ['type'] = 'act', ['action'] = jump, ['time'] = 1000})
+            objects[#objects]['x'] = 720
          else
-            table.insert(objects, {['y']=-20, ['x'] = 1160, ['w'] = 40, ['h'] = 40, ['type'] = 'act', ['action'] = jump, ['time'] = 1000})
+            objects[#objects]['x'] = 1160
          end
-      else
-         if math.random() < 0.5 then
-            table.insert(objects, {['y']=-20, ['x'] = 720, ['w'] = 40, ['h'] = 40, ['type'] = 'obst'})
+         if math.random() < 0.2 and #actions < 10 then
+               objects[#objects]['type'] = 'act'
+               local type = math.random()
+               if type < 0.6 then
+                  objects[#objects]['action'] = jump
+                  objects[#objects]['time'] = 1000
+                  objects[#objects]['number'] = 3
+                  objects[#objects]['name'] = 'Jump'
+               end
+               if type >= 0.6 and type < 0.8 then
+                  objects[#objects]['action'] = flurry
+                  objects[#objects]['time'] = 200
+                  objects[#objects]['number'] = 1
+                  objects[#objects]['name'] = 'Flurry'
+               end
+               if type >= 0.8 and type < 0.9 then
+                  objects[#objects]['action'] = boom
+                  objects[#objects]['time'] = 1
+                  objects[#objects]['number'] = 1
+                  objects[#objects]['name'] = 'Boom'
+               end
+               if type > 0.9 then
+                  objects[#objects]['action'] = nothing
+                  objects[#objects]['time'] = 15
+                  objects[#objects]['number'] = 1
+                  objects[#objects]['name'] = 'Red Herring'
+               end
          else
-            table.insert(objects, {['y']=-20, ['x'] = 1160, ['w'] = 40, ['h'] = 40, ['type'] = 'obst'})
+            objects[#objects]['type'] = 'obst'
          end
-      end
-   end
+         objecttimer = 25
+      end --object creation
 
-   for i = #objects, 1, -1 do
-      objects[i].y = objects[i].y+4
-   end
+      for i = #objects, 1, -1 do
+         objects[i].y = objects[i].y+ 4 * math.max(math.log(Player.score/800)+1, 1)
+      end --object movement
 
-   for i = #objects, 1, -1 do
-      object = objects[i]
-      if CheckCollision(Player, object) then
-         if object['type']=='obst' then
-            gameover = true
-         else
-            if object['type']=='act' then
-               table.insert(actions, {['action']=object['action'], ['time'] =object['time']})
-               table.remove(objects, i)
+      for i = #objects, 1, -1 do
+         local object = objects[i]
+         local exists = true
+         for j = #actives, 1, -1 do
+            local active = actives[j]
+            if CheckCollision(active, object) then
+               table.remove(objects,i)
+               exists = false
+               goto continue
             end
          end
-      end
+
+         if CheckCollision(Player, object) then
+            if object['type']=='obst' then
+               gameover = true
+            else
+               if object['type']=='act' then
+                  for i = object['number'], 1, -1 do
+                     table.insert(actions, {['action']=object['action'], ['time'] =object['time'], ['name'] = object['name']})
+                  end
+                  table.remove(objects, i)
+               end
+            end
+         end
+
+         if object.y > screenHeight then
+            table.remove(objects, i)
+         end
+         ::continue::
+      end --player/object collision
+
    end
 
 end
@@ -136,12 +203,12 @@ function love.draw()
       love.graphics.setColor(0, 0, 0)
 
       for i=#walls, 1, -1 do
-         wall = walls[i]
+         local wall = walls[i]
          love.graphics.rectangle('fill', wall.x, wall.y, wall.w, wall.h)
       end
 
       for i=#objects, 1, -1 do
-         object = objects[i]
+         local object = objects[i]
          if object['type']=='obst' then
             love.graphics.setColor(1, 0, 0)
          else
@@ -150,8 +217,23 @@ function love.draw()
          love.graphics.rectangle('fill', object.x, object.y, object.w, object.h)
       end
 
+      for i=#actives, 1, -1 do
+         local active = actives[i]
+         if active['type']=='Flurry' then
+            love.graphics.setColor(0.1, 0.1, 0.1)
+            love.graphics.rectangle('fill', active.x, active.y, active.w, active.h)
+         end
+      end
+
       love.graphics.setColor(1, 1, 1)
-      love.graphics.print(Player.side, 960, 400)
+      for i=#actions, 1, -1 do
+         local name = actions[i]['name']
+         love.graphics.print(name, 120, 40+i*10)
+      end
+
+      love.graphics.print(Player.side .. objecttimer, 960, 400)
+      love.graphics.print(Player.score .. Player.tleft, 960, 200)
+
    else
       love.graphics.setBackgroundColor(0.1,0,0.05)
       love.graphics.print("gameover", 960, 400)
@@ -164,14 +246,31 @@ end
 
 function jump()
    Player.pass = false
-   Player.x = Player.x + 8 * Player.side
+   Player.x = Player.x + 16 * Player.side
    for i=#walls, 1, -1 do
-      wall = walls[i]
+      local wall = walls[i]
       if CheckCollision(Player, wall) then
          Player.tleft = 0
-         Player.x = Player.x - 8*Player.side
+         Player.x = Player.x - 16*Player.side
          Player.side = Player.side * (-1)
          return
       end
+   end
+end
+
+function flurry()
+   for i=#actives, 1, -1 do
+      if actives[i]['type']=='Flurry' then
+         actives[i]['x'] = Player.x
+         goto noflurry
+      end
+   end
+   table.insert(actives, {['type'] = 'Flurry', ['x'] = Player.x, ['y'] = Player.y - Player.h /3, ['w'] = Player.w, ['h'] = Player.h / 3})
+   ::noflurry::
+end
+
+function boom()
+   for i=#objects, 1, -1 do
+      table.remove(objects, 1)
    end
 end

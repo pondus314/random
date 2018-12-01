@@ -9,6 +9,7 @@ function player:setup()
    self.action = nil
    self.tleft = 0
    self.side = 1
+   self.score = 0
 end
 
 return player
