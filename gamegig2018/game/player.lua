@@ -1,6 +1,6 @@
 local player = {}
 
-function player:setup()
+function player:initialise()
    self.x = 720
    self.y = 840
    self.w = 48

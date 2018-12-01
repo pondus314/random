@@ -30,7 +30,7 @@ function love.load()
    button.held = false
    button.lift = false
 
-   Player:setup()
+   Player:initialise()
 
    walls = {}
    table.insert(walls, {['x'] = 0, ['y'] = 0, ['w'] = 720, ['h'] = 1080 })
@@ -45,27 +45,27 @@ function love.load()
       [1] = {
          ['action'] = jump,
          ['time'] = 1000,
-         ['name'] = 'Jump'
+         ['name'] = 'Jumpy boots'
       },
       [2] = {
          ['action'] = jump,
          ['time'] = 1000,
-         ['name'] = 'Jump'
+         ['name'] = 'Jumpy boots'
       },
       [3] = {
          ['action'] = jump,
          ['time'] = 1000,
-         ['name'] = 'Jump'
+         ['name'] = 'Jumpy boots'
       },
       [4] = {
          ['action'] = jump,
          ['time'] = 1000,
-         ['name'] = 'Jump'
+         ['name'] = 'Jumpy boots'
       },
       [5] = {
          ['action'] = jump,
          ['time'] = 1000,
-         ['name'] = 'Jump'
+         ['name'] = 'Jumpy boots'
       }
    }
 
@@ -126,29 +126,38 @@ function love.update()
          if math.random() < 0.2 and #actions < 10 then
                objects[#objects]['type'] = 'act'
                local type = math.random()
-               if type < 0.6 then
+               if type < 0.4 then
                   objects[#objects]['action'] = jump
                   objects[#objects]['time'] = 1000
                   objects[#objects]['number'] = 3
-                  objects[#objects]['name'] = 'Jump'
+                  objects[#objects]['name'] = 'Jumpy boots'
                end
-               if type >= 0.6 and type < 0.8 then
+               if type >= 0.4 and type < 0.6 then
                   objects[#objects]['action'] = flurry
                   objects[#objects]['time'] = 200
                   objects[#objects]['number'] = 1
-                  objects[#objects]['name'] = 'Flurry'
+                  objects[#objects]['name'] = 'Sword'
                end
-               if type >= 0.8 and type < 0.9 then
+               if type >= 0.6 and type < 0.7 then
                   objects[#objects]['action'] = boom
                   objects[#objects]['time'] = 1
                   objects[#objects]['number'] = 1
-                  objects[#objects]['name'] = 'Boom'
+                  objects[#objects]['name'] = 'Explosives'
+               end
+               if type >= 0.7 and type < 0.9 then
+                  objects[#objects]['action'] = flip
+                  objects[#objects]['time'] = 1
+                  objects[#objects]['number'] = 1
+                  objects[#objects]['name'] = 'Invertor'
                end
                if type > 0.9 then
                   objects[#objects]['action'] = nothing
-                  objects[#objects]['time'] = 15
+                  objects[#objects]['time'] = 40
                   objects[#objects]['number'] = 1
                   objects[#objects]['name'] = 'Red Herring'
+               end
+               if math.random() < 0.05 then
+                  objects[#objects]['name'] = 'Random'
                end
          else
             objects[#objects]['type'] = 'obst'
@@ -205,7 +214,7 @@ function love.draw()
       for i=#walls, 1, -1 do
          local wall = walls[i]
          love.graphics.rectangle('fill', wall.x, wall.y, wall.w, wall.h)
-      end
+      end --walls drawing
 
       for i=#objects, 1, -1 do
          local object = objects[i]
@@ -215,7 +224,7 @@ function love.draw()
             love.graphics.setColor(0, 0, 1)
          end
          love.graphics.rectangle('fill', object.x, object.y, object.w, object.h)
-      end
+      end --object drawing
 
       for i=#actives, 1, -1 do
          local active = actives[i]
@@ -223,7 +232,7 @@ function love.draw()
             love.graphics.setColor(0.1, 0.1, 0.1)
             love.graphics.rectangle('fill', active.x, active.y, active.w, active.h)
          end
-      end
+      end --actives drawing
 
       love.graphics.setColor(1, 1, 1)
       for i=#actions, 1, -1 do
@@ -231,8 +240,7 @@ function love.draw()
          love.graphics.print(name, 120, 40+i*10)
       end
 
-      love.graphics.print(Player.side .. objecttimer, 960, 400)
-      love.graphics.print(Player.score .. Player.tleft, 960, 200)
+      love.graphics.print(Player.score..'  '..love.timer.getFPS(), 960, 200)
 
    else
       love.graphics.setBackgroundColor(0.1,0,0.05)
@@ -261,16 +269,26 @@ end
 function flurry()
    for i=#actives, 1, -1 do
       if actives[i]['type']=='Flurry' then
-         actives[i]['x'] = Player.x
+         actives[i]['x'] = Player.x+4
          goto noflurry
       end
    end
-   table.insert(actives, {['type'] = 'Flurry', ['x'] = Player.x, ['y'] = Player.y - Player.h /3, ['w'] = Player.w, ['h'] = Player.h / 3})
+   table.insert(actives, {['type'] = 'Flurry', ['x'] = Player.x+4, ['y'] = Player.y - Player.h /3, ['w'] = Player.w-8, ['h'] = Player.h / 3})
    ::noflurry::
 end
 
 function boom()
    for i=#objects, 1, -1 do
       table.remove(objects, 1)
+   end
+end
+
+function flip()
+   if math.random() < 0.5 then
+      for i=#objects, 1, -1 do
+         objects[i].x = 1880 - objects[i].x
+      end
+   else
+      Player.x = 1920-48-Player.x
    end
 end
